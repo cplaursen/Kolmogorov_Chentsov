@@ -618,126 +618,108 @@ qed
 lemma dyadic_expansion_unique:
   assumes "dyadic_expansion x n b k"
     and "dyadic_expansion x n c j"
-  shows "b = c \<and> j = k"
+  shows "b = c ∧ j = k"
 proof (safe, rule ccontr)
   show "j = k"
     using assms dyadic_expansion_floor by blast
-  assume "b \<noteq> c"
-  have eq: "(\<Sum>m\<in>{1..n}. (b ! (m-1)) / 2 ^ m) = (\<Sum>m\<in>{1..n}. (c ! (m-1)) / 2 ^ m)"
+  assume "b ≠ c"
+  have eq: "(∑m∈{1..n}. (b ! (m-1)) / 2 ^ m) = (∑m∈{1..n}. (c ! (m-1)) / 2 ^ m)"
   proof -
-    have "k + (\<Sum>m\<in>{1..n}. (b ! (m-1)) / 2 ^ m) = j + (\<Sum>m\<in>{1..n}. (c ! (m-1)) / 2 ^ m)"
+    have "k + (∑m∈{1..n}. (b ! (m-1)) / 2 ^ m) = j + (∑m∈{1..n}. (c ! (m-1)) / 2 ^ m)"
       using assms dyadic_expansionD(3) by blast
     then show ?thesis
-      using \<open>j = k\<close> by linarith
+      using ‹j = k› by linarith
   qed
-  have ex: "\<exists>l < n. b ! l \<noteq> c ! l"
-    by (metis list_eq_iff_nth_eq assms \<open>b \<noteq> c\<close> dyadic_expansionD(2))
-  define l where "l \<equiv> LEAST l. l < n \<and> b ! l \<noteq> c ! l"
-  then have l: "l < n" "b ! l \<noteq> c ! l"
+  have ex: "∃l < n. b ! l ≠ c ! l"
+    by (metis list_eq_iff_nth_eq assms ‹b ≠ c› dyadic_expansionD(2))
+  text ‹ l is the highest-value bit in the expansion that is not equal ›
+  define l where "l ≡ LEAST l. l < n ∧ b ! l ≠ c ! l"
+  then have l: "l < n" "b ! l ≠ c ! l"
     unfolding l_def using LeastI_ex[OF ex] by blast+
-  have less_l: "b ! k = c ! k" if \<open>k < l\<close> for k
+  have less_l: "b ! k = c ! k" if ‹k < l› for k
   proof -
     have "k < n"
       using that l by linarith
     then show "b ! k = c ! k"
       using that unfolding l_def using not_less_Least by blast
   qed
-  then have "l \<in> {0..n-1}"
+  then have "l ∈ {0..n-1}"
     using l by simp
   then have "l < n"
     apply (simp add: algebra_simps)
     using ex by fastforce
-  then have "b ! l \<in> {0,1}" "c ! l \<in> {0,1}"
+  then have "b ! l ∈ {0,1}" "c ! l ∈ {0,1}"
     by (metis assms insert_absorb insert_subset dyadic_expansionD(1,2) nth_mem)+
-  then consider "b ! l = 0 \<and> c ! l = 1" | "b ! l = 1 \<and> c ! l = 0"
-    by (smt (verit) LeastI_ex emptyE insertE l_def ex)
-  then have sum_ge_l_noteq:"(\<Sum>m\<in>{l+1..n}. (b ! (m-1)) / 2 ^ m) \<noteq> (\<Sum>m\<in>{l+1..n}. (c ! (m-1)) / 2 ^ m)"
-  proof cases
-    case 1
-    have *: ?thesis if "l + 1 = n"
-      using that 1 by auto
-    {
-      assume \<open>l + 1 < n\<close>
-      have "(\<Sum>m\<in>{l+1..n}. (c ! (m-1)) / 2 ^ m) = 
-           (c ! ((l+1)-1)) / 2 ^ (l+1) + (\<Sum>m\<in>{Suc (l+1)..n}. (c ! (m-1)) / 2 ^ m)"
-        by (smt (verit, ccfv_SIG) Suc_eq_plus1 Suc_le_mono Suc_pred' \<open>l \<in> {0..n - 1}\<close>
+  {
+    fix i j :: "nat list"
+    fix m :: int
+    assume i: "i!l = 0" and j: "j!l = 1"
+      and dyadic: "dyadic_expansion x n i m"
+    text ‹ If the bits do not coincide at l, the sums of bits below l are not equal ›
+    have "(∑m∈{l+1..n}. (i ! (m-1)) / 2 ^ m) ≠ (∑m∈{l+1..n}. (j ! (m-1)) / 2 ^ m)"
+    proof (cases "l+1<n")
+      case True
+      have "(∑m∈{l+1..n}. (j ! (m-1)) / 2 ^ m) = 
+           (j ! ((l+1)-1)) / 2 ^ (l+1) + (∑m∈{Suc (l+1)..n}. (j ! (m-1)) / 2 ^ m)"
+        by (smt (verit, ccfv_SIG) Suc_eq_plus1 Suc_le_mono Suc_pred' ‹l ∈ {0..n - 1}›
             atLeastAtMost_iff bot_nat_0.not_eq_extremum ex order_less_trans sum.atLeast_Suc_atMost)
-      also have "... \<ge> 1 / 2 ^ (l+1)"
-        apply (simp add: 1)
+      also have "... ≥ 1 / 2 ^ (l+1)"
+        apply (simp add: i j)
         apply (rule sum_nonneg)
         using dyadic_expansion_frac_range[OF assms(2)] by simp
-      finally have c_ge: "(\<Sum>m\<in>{l+1..n}. (c ! (m-1)) / 2 ^ m) \<ge> 1/2^(l+1)" .
-      have "(\<Sum>m\<in>{l+1..n}. (b ! (m-1)) / 2 ^ m) =
-            (b ! ((l+1)-1)) / 2 ^ (l+1) + (\<Sum>m\<in>{Suc (l+1)..n}. (b ! (m-1)) / 2 ^ m)"
-        by (meson \<open>l + 1 < n\<close> nat_less_le sum.atLeast_Suc_atMost)
-      also have "... = (\<Sum>m\<in>{Suc (l+1)..n}. (b ! (m-1)) / 2 ^ m)"
-        using 1 by auto
-      also have "... \<le> (\<Sum>m\<in>{Suc (l+1)..n}. 1 / 2 ^ m)"
+      finally have x_ge: "(∑m∈{l+1..n}. (j ! (m-1)) / 2 ^ m) ≥ 1/2^(l+1)" .
+      have "(∑m∈{l+1..n}. (i ! (m-1)) / 2 ^ m) =
+            (i ! ((l+1)-1)) / 2 ^ (l+1) + (∑m∈{Suc (l+1)..n}. (i ! (m-1)) / 2 ^ m)"
+        by (meson True nat_less_le sum.atLeast_Suc_atMost)
+      also have "... = (∑m∈{Suc (l+1)..n}. (i ! (m-1)) / 2 ^ m)"
+        using i by auto
+      also have "... ≤ (∑m∈{Suc (l+1)..n}. 1 / 2 ^ m)"
         apply (rule sum_mono)
-        using dyadic_expansion_frac_range[OF assms(1)] apply (simp add: field_simps)
-        by (metis (no_types, lifting) One_nat_def add_leE nle_le plus_1_eq_Suc)
+        using dyadic_expansion_frac_range[OF dyadic] apply (simp add: field_simps)
+        by (metis Suc_le_D Suc_le_eq le0 zero_less_Suc)
       also have "... < 1 / 2 ^ (l+1)"
-        using sum_interval_pow2_inv[OF \<open>l + 1 < n\<close>] by fastforce
-      finally have "(\<Sum>m\<in>{l+1..n}. (b ! (m-1)) / 2 ^ m) < 1 / 2 ^ (l+1)" .
-      with c_ge have ?thesis
+        using sum_interval_pow2_inv[OF ‹l + 1 < n›] by fastforce
+      finally have "(∑m∈{l+1..n}. (i ! (m-1)) / 2 ^ m) < 1 / 2 ^ (l+1)" .
+      with x_ge show ?thesis
         by argo
-    }
-    then show ?thesis
-      using * \<open>l < n\<close> by linarith
-  next
-    case 2 (* Copied and pasted from above - WLOG argument *)
-    have *: ?thesis if "l + 1 = n"
-      using that 2 by auto
-    {
-      assume \<open>l + 1 < n\<close>
-      have "(\<Sum>m\<in>{l+1..n}. (b ! (m-1)) / 2 ^ m) =
-           (b ! ((l+1)-1)) / 2 ^ (l+1) + (\<Sum>m\<in>{Suc (l+1)..n}. (b ! (m-1)) / 2 ^ m)"
-        by (meson \<open>l + 1 < n\<close> nat_less_le sum.atLeast_Suc_atMost)
-      also have "... \<ge> 1 / 2 ^ (l+1)"
-        apply (simp add: 2)
-        apply (rule sum_nonneg)
-        using dyadic_expansion_frac_range[OF assms(1)] by simp
-      finally have b_ge: "(\<Sum>m\<in>{l+1..n}. (b ! (m-1)) / 2 ^ m) \<ge> 1/2^(l+1)" .
-      have "(\<Sum>m\<in>{l+1..n}. (c ! (m-1)) / 2 ^ m) =
-            (c ! ((l+1)-1)) / 2 ^ (l+1) + (\<Sum>m\<in>{Suc (l+1)..n}. (c ! (m-1)) / 2 ^ m)"
-        by (meson \<open>l + 1 < n\<close> nat_less_le sum.atLeast_Suc_atMost)
-      also have "... = (\<Sum>m\<in>{Suc (l+1)..n}. (c ! (m-1)) / 2 ^ m)"
-        using 2 by auto
-      also have "... \<le> (\<Sum>m\<in>{Suc (l+1)..n}. 1 / 2 ^ m)"
-        apply (intro sum_mono divide_right_mono)
-        using dyadic_expansion_frac_range[OF assms(2)]
-         apply (metis (no_types, opaque_lifting) One_nat_def Suc_leI Suc_le_mono atLeastAtMost_iff
-            atLeastAtMost_singleton_iff bot_nat_0.extremum bot_nat_0.not_eq_extremum 
-            insert_iff of_nat_eq_1_iff of_nat_le_iff)
-        apply simp
-        done
-      also have "... < 1 / 2 ^ (l+1)"
-        using sum_interval_pow2_inv[OF \<open>l + 1 < n\<close>] by fastforce
-      finally have "(\<Sum>m\<in>{l+1..n}. (c ! (m-1)) / 2 ^ m) < 1 / 2 ^ (l+1)" .
-      with b_ge have ?thesis
-        by argo
-    }
-    then show ?thesis
-      using * \<open>l < n\<close> by linarith
-  qed
-  moreover have sum_upto_l_eq: "(\<Sum>m\<in>{1..l}. (b ! (m-1)) / 2 ^ m) =
-                                (\<Sum>m\<in>{1..l}. (c ! (m-1)) / 2 ^ m)"
+    next
+      case False
+      then have "l+1 = n"
+        using ‹l < n› by simp
+      then show ?thesis
+        using i j by force
+    qed
+  } note sum_ge_l_noteq_wlog = this
+  consider "b!l = 0 ∧ c!l = 1" | "b!l = 1 ∧ c!l = 0"
+    using ‹b ! l ∈ {0, 1}› ‹c ! l ∈ {0, 1}› l(2) by fastforce
+  then have sum_ge_l_noteq: 
+    "(∑m = l + 1..n. real (b ! (m - 1)) / 2 ^ m) ≠
+     (∑m = l + 1..n. real (c ! (m - 1)) / 2 ^ m)"
+    apply (cases)
+     apply (rule sum_ge_l_noteq_wlog; simp)
+    using assms(1) apply blast
+    apply (rule sum_ge_l_noteq_wlog[symmetric])
+    using assms apply simp_all
+    done
+  moreover have sum_upto_l_eq: "(∑m∈{1..l}. (b ! (m-1)) / 2 ^ m) =
+                                (∑m∈{1..l}. (c ! (m-1)) / 2 ^ m)"
     apply (safe intro!: sum.cong)
     apply simp
-    by (smt (verit, best) Suc_le_eq Suc_pred \<open>l < n\<close> l_def not_less_Least order_less_trans)
-  ultimately have "(\<Sum>m\<in>{1..n}. (b ! (m-1)) / 2 ^ m) \<noteq> (\<Sum>m\<in>{1..n}. (c ! (m-1)) / 2 ^ m)"
+    by (smt (verit, best) Suc_le_eq Suc_pred ‹l < n› l_def not_less_Least order_less_trans)
+  ultimately have "(∑m∈{1..n}. (b ! (m-1)) / 2 ^ m) ≠ (∑m∈{1..n}. (c ! (m-1)) / 2 ^ m)"
   proof -
-    have "{1..n} = {1..l} \<union> {l<..n}"
-      using \<open>l < n\<close> by auto
-    moreover have "{1..l} \<inter> {l<..n} = {}"
+    have "{1..n} = {1..l} ∪ {l<..n}"
+      using ‹l < n› by auto
+    moreover have "{1..l} ∩ {l<..n} = {}"
       using ivl_disj_int_two(8) by blast
-    ultimately have split_sum: "(\<Sum>m \<in>{1..n}. (c ! (m-1)) / 2 ^ m) =
-                 (\<Sum>m =1..l. (c ! (m-1)) / 2 ^ m) + (\<Sum>m \<in> {l<..n}. (c ! (m-1)) / 2 ^ m)"
-      for c :: "nat list"
+    ultimately have split_sum: "(∑m ∈{1..n}. (h ! (m-1)) / 2 ^ m) =
+                 (∑m =1..l. (h ! (m-1)) / 2 ^ m) + (∑m ∈ {l<..n}. (h ! (m-1)) / 2 ^ m)"
+      for h :: "nat list"
       by (simp add: sum_Un)
     then show ?thesis
-      using sum_upto_l_eq sum_ge_l_noteq split_sum[of b] split_sum[of c]
-      by (smt (verit, del_insts) Suc_eq_plus1 atLeastSucAtMost_greaterThanAtMost)
+      apply simp
+      by (metis (no_types, lifting)  sum_upto_l_eq sum_ge_l_noteq One_nat_def Suc_eq_plus1
+          add_left_imp_eq atLeastSucAtMost_greaterThanAtMost sum.cong)
   qed
   then show False
     using eq by blast
