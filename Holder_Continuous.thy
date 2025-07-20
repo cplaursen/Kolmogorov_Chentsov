@@ -344,4 +344,112 @@ lemma holder_const: "\<gamma>-holder_on C (\<lambda>_. c) \<longleftrightarrow> 
 lemma local_holder_const: "local_holder_on \<gamma> C (\<lambda>_. c) \<longleftrightarrow> \<gamma> \<in> {0<..1}"
   using holder_const holder_implies_local_holder local_holder_on_def by blast
 
+section \<open> For 0 < \<alpha> <= 1, (\<lambda>x. x powr \<alpha>) is \<alpha>-holder_on {0..} \<close>
+
+lemma concave_on_subset:
+  assumes "concave_on T f" "S \<subseteq> T" "convex S"
+  shows "concave_on S f"
+proof -
+  have "convex_on T (\<lambda>x. - f x)"
+    using assms(1) unfolding concave_on_def .
+  then have "convex_on S (\<lambda>x. - f x)"
+    using assms(2,3) by (rule convex_on_subset)
+  then show ?thesis
+    unfolding concave_on_def by blast
+qed
+
+lemma concave_subadditive:
+  fixes f :: "real \<Rightarrow> real"
+  assumes "concave_on {0..} f" "0 \<le> f 0" "0 \<le> x" "0 \<le> y"
+  shows "f (x + y) \<le> f x + f y"
+proof -
+  have mult: "f (a * t) \<ge> f a * t"
+    if "0 \<le> t" "t \<le> 1" "a \<in> {0..}" for t a
+  proof -
+    have "f a * t \<le> (1-t) * f 0 + t * f a"
+      using assms(2) that(1,2) mult_left_le_one_le by simp
+    also have "... \<le> f ((1-t) * 0 + t * a)"
+      using assms(1)[THEN concave_onD, OF that(1,2)] that(3) by force
+    also have "... \<le> f (t * a)"
+      by auto
+    finally show ?thesis
+      using add.commute by argo
+  qed
+  consider "x + y = 0" | "x + y > 0"
+    using assms(3,4) by linarith
+  then show ?thesis
+  proof cases
+    case 1
+    then have "x = 0" "y = 0"
+      using assms(3,4) by argo+
+    then show ?thesis
+      by (simp add: assms(2))
+  next
+    case 2
+    then have "f (x + y) = f (x + y) * (x / (x+y)) + f (x+y) * (y / (x+y))"
+      by (metis (no_types, lifting) mult.commute mult_zero_left nonzero_mult_div_cancel_right
+          not_square_less_zero times_divide_eq_right vector_space_over_itself.scale_left_distrib)
+    also have "... \<le> f ((x + y) * (x / (x + y))) + f ((x + y) * (y / (x + y)))"
+      apply (intro add_mono mult)
+      using assms(3,4) divide_nonneg_pos 2 by simp_all
+    also have "... = f x + f y"
+      using 2 by (auto intro!: arg_cong2[where f="(+)"] arg_cong[where f=f])
+    finally show ?thesis
+      by blast
+  qed
+qed    
+
+lemma powr_0_1_concave:
+  assumes "\<alpha> \<in> {0<..1}"
+  shows "concave_on {0..} (\<lambda>x. x powr \<alpha>)"
+proof -
+  have "concave_on {0<..} (\<lambda>x. x powr \<alpha>)"
+    apply (rule f''_le0_imp_concave)
+       apply simp
+      apply (auto intro!: has_real_derivative_powr)[1]
+    using assms apply (auto intro!: derivative_intros simp: field_simps)
+    done
+  {
+    fix x y :: real
+    assume "x \<in> {0..}" "y \<in> {0..}"
+    then have *: "\<forall>u\<ge>0. \<forall>v\<ge>0. u + v = 1 \<longrightarrow> u * x powr \<alpha> + v * y powr \<alpha> \<le> (u *\<^sub>R x + v *\<^sub>R y) powr \<alpha>"
+      if "x = 0 \<or> y = 0"
+      using that apply auto
+       apply (metis add.commute assms greaterThanAtMost_iff landau_o.R_mult_right_mono
+          le_add_same_cancel1 powr_ge_zero powr_mono' powr_mult powr_one_gt_zero_iff)+
+      done
+    consider "x = 0 \<or> y = 0" | "x \<in> {0<..} \<and> y \<in> {0<..}"
+      using \<open>x \<in> {0..}\<close> \<open>y \<in> {0..}\<close> by fastforce
+    then have "\<forall>u\<ge>0. \<forall>v\<ge>0. u + v = 1 \<longrightarrow> u * x powr \<alpha> + v * y powr \<alpha> \<le> (u *\<^sub>R x + v *\<^sub>R y) powr \<alpha>"
+      apply cases
+       apply (fact *)
+      using \<open>concave_on {0<..} (\<lambda>x. x powr \<alpha>)\<close>[simplified concave_on_iff] apply simp
+      done
+  }  then show ?thesis
+    by (simp add: concave_on_iff)
+qed
+
+corollary powr_0_1_concave_interval:
+  assumes "x \<ge> 0" "y \<ge> 0" "\<alpha> \<in> {0<..1}"
+  shows "concave_on {x..y} (\<lambda>r. r powr \<alpha>)"
+  using assms by (auto intro: concave_on_subset[OF powr_0_1_concave])
+
+lemma powr_0_1_subadditive:
+  fixes x y \<alpha> :: real
+  assumes "\<alpha> \<in> {0<..1}" "x \<ge> 0" "y \<ge> 0"
+  shows "x powr \<alpha> + y powr \<alpha> \<ge> (x + y) powr \<alpha>"
+  using concave_subadditive powr_0_1_concave[OF assms(1)] assms(2,3) by fastforce
+
+lemma holder_powr:
+  assumes "\<alpha> \<in> {0<..1}"
+  shows "\<alpha>-holder_on {0..} (\<lambda>x. x powr \<alpha>)"
+  apply (rule holder_onI[OF assms])
+  apply (rule exI[where x=1])
+  apply (auto simp add: dist_real_def abs_real_def)
+     apply (smt (verit, best) powr_0_1_subadditive[OF assms])
+    apply (meson assms greaterThanAtMost_iff powr_less_mono2)
+  apply (metis assms greaterThanAtMost_iff linorder_not_less order_less_le powr_less_mono2)
+  apply (smt (verit, best) powr_0_1_subadditive[OF assms])
+  done
+
 end
