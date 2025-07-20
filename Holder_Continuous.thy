@@ -363,10 +363,10 @@ lemma concave_subadditive:
   assumes "concave_on {0..} f" "0 \<le> f 0" "0 \<le> x" "0 \<le> y"
   shows "f (x + y) \<le> f x + f y"
 proof -
-  have mult: "f (a * t) \<ge> f a * t"
+  have mult: "t * f a \<le> f (t * a)"
     if "0 \<le> t" "t \<le> 1" "a \<in> {0..}" for t a
   proof -
-    have "f a * t \<le> (1-t) * f 0 + t * f a"
+    have "t * f a \<le> (1-t) * f 0 + t * f a"
       using assms(2) that(1,2) mult_left_le_one_le by simp
     also have "... \<le> f ((1-t) * 0 + t * a)"
       using assms(1)[THEN concave_onD, OF that(1,2)] that(3) by force
@@ -386,14 +386,14 @@ proof -
       by (simp add: assms(2))
   next
     case 2
-    then have "f (x + y) = f (x + y) * (x / (x+y)) + f (x+y) * (y / (x+y))"
-      by (metis (no_types, lifting) mult.commute mult_zero_left nonzero_mult_div_cancel_right
-          not_square_less_zero times_divide_eq_right vector_space_over_itself.scale_left_distrib)
-    also have "... \<le> f ((x + y) * (x / (x + y))) + f ((x + y) * (y / (x + y)))"
+    then have "f (x + y) = (x/(x+y)) * f (x + y) + (y / (x+y)) * f (x + y)"
+      by (simp add: add_divide_distrib[symmetric] 
+                  vector_space_over_itself.scale_left_distrib[symmetric])
+    also have "... \<le> f (x / (x + y) * (x + y)) + f (y / (x + y) * (x + y))"
       apply (intro add_mono mult)
       using assms(3,4) divide_nonneg_pos 2 by simp_all
     also have "... = f x + f y"
-      using 2 by (auto intro!: arg_cong2[where f="(+)"] arg_cong[where f=f])
+      using 2 by (auto cong: arg_cong2[where f="(+)"] arg_cong[where f=f])
     finally show ?thesis
       by blast
   qed
@@ -448,7 +448,7 @@ lemma holder_powr:
   apply (auto simp add: dist_real_def abs_real_def)
      apply (smt (verit, best) powr_0_1_subadditive[OF assms])
     apply (meson assms greaterThanAtMost_iff powr_less_mono2)
-  apply (metis assms greaterThanAtMost_iff linorder_not_less order_less_le powr_less_mono2)
+   apply (metis assms greaterThanAtMost_iff linorder_not_less order_less_le powr_less_mono2)
   apply (smt (verit, best) powr_0_1_subadditive[OF assms])
   done
 
