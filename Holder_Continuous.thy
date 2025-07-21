@@ -344,7 +344,7 @@ lemma holder_const: "\<gamma>-holder_on C (\<lambda>_. c) \<longleftrightarrow> 
 lemma local_holder_const: "local_holder_on \<gamma> C (\<lambda>_. c) \<longleftrightarrow> \<gamma> \<in> {0<..1}"
   using holder_const holder_implies_local_holder local_holder_on_def by blast
 
-section \<open> For 0 < \<alpha> <= 1, (\<lambda>x. x powr \<alpha>) is \<alpha>-holder_on {0..} \<close>
+section \<open> For 0 < \<gamma> <= 1, (\<lambda>x. x powr \<gamma>) is \<gamma>-holder_on {0..} \<close>
 
 lemma concave_on_subset:
   assumes "concave_on T f" "S \<subseteq> T" "convex S"
@@ -400,10 +400,10 @@ proof -
 qed    
 
 lemma powr_0_1_concave:
-  assumes "\<alpha> \<in> {0<..1}"
-  shows "concave_on {0..} (\<lambda>x. x powr \<alpha>)"
+  assumes "\<gamma> \<in> {0<..1}"
+  shows "concave_on {0..} (\<lambda>x. x powr \<gamma>)"
 proof -
-  have "concave_on {0<..} (\<lambda>x. x powr \<alpha>)"
+  have "concave_on {0<..} (\<lambda>x. x powr \<gamma>)"
     apply (rule f''_le0_imp_concave)
        apply simp
       apply (auto intro!: has_real_derivative_powr)[1]
@@ -412,7 +412,7 @@ proof -
   {
     fix x y :: real
     assume "x \<in> {0..}" "y \<in> {0..}"
-    then have *: "\<forall>u\<ge>0. \<forall>v\<ge>0. u + v = 1 \<longrightarrow> u * x powr \<alpha> + v * y powr \<alpha> \<le> (u *\<^sub>R x + v *\<^sub>R y) powr \<alpha>"
+    then have *: "\<forall>u\<ge>0. \<forall>v\<ge>0. u + v = 1 \<longrightarrow> u * x powr \<gamma> + v * y powr \<gamma> \<le> (u *\<^sub>R x + v *\<^sub>R y) powr \<gamma>"
       if "x = 0 \<or> y = 0"
       using that apply auto
        apply (metis add.commute assms greaterThanAtMost_iff landau_o.R_mult_right_mono
@@ -420,32 +420,32 @@ proof -
       done
     consider "x = 0 \<or> y = 0" | "x \<in> {0<..} \<and> y \<in> {0<..}"
       using \<open>x \<in> {0..}\<close> \<open>y \<in> {0..}\<close> by fastforce
-    then have "\<forall>u\<ge>0. \<forall>v\<ge>0. u + v = 1 \<longrightarrow> u * x powr \<alpha> + v * y powr \<alpha> \<le> (u *\<^sub>R x + v *\<^sub>R y) powr \<alpha>"
+    then have "\<forall>u\<ge>0. \<forall>v\<ge>0. u + v = 1 \<longrightarrow> u * x powr \<gamma> + v * y powr \<gamma> \<le> (u *\<^sub>R x + v *\<^sub>R y) powr \<gamma>"
       apply cases
        apply (fact *)
-      using \<open>concave_on {0<..} (\<lambda>x. x powr \<alpha>)\<close>[simplified concave_on_iff] apply simp
+      using \<open>concave_on {0<..} (\<lambda>x. x powr \<gamma>)\<close>[simplified concave_on_iff] apply simp
       done
   }  then show ?thesis
     by (simp add: concave_on_iff)
 qed
 
 corollary powr_0_1_concave_interval:
-  assumes "x \<ge> 0" "y \<ge> 0" "\<alpha> \<in> {0<..1}"
-  shows "concave_on {x..y} (\<lambda>r. r powr \<alpha>)"
+  assumes "x \<ge> 0" "y \<ge> 0" "\<gamma> \<in> {0<..1}"
+  shows "concave_on {x..y} (\<lambda>r. r powr \<gamma>)"
   using assms by (auto intro: concave_on_subset[OF powr_0_1_concave])
 
 lemma powr_0_1_subadditive:
-  fixes x y \<alpha> :: real
-  assumes "\<alpha> \<in> {0<..1}" "x \<ge> 0" "y \<ge> 0"
-  shows "x powr \<alpha> + y powr \<alpha> \<ge> (x + y) powr \<alpha>"
+  fixes x y \<gamma> :: real
+  assumes "\<gamma> \<in> {0<..1}" "x \<ge> 0" "y \<ge> 0"
+  shows "x powr \<gamma> + y powr \<gamma> \<ge> (x + y) powr \<gamma>"
   using concave_subadditive powr_0_1_concave[OF assms(1)] assms(2,3) by fastforce
 
-lemma holder_powr:
-  assumes "\<alpha> \<in> {0<..1}"
-  shows "\<alpha>-holder_on {0..} (\<lambda>x. x powr \<alpha>)"
-  apply (rule holder_onI[OF assms])
-  apply (rule exI[where x=1])
-  apply (auto simp add: dist_real_def abs_real_def)
+theorem holder_powr:
+  assumes "\<gamma> \<in> {0<..1}"
+  shows "\<gamma>-holder_on {0..} (\<lambda>x. x powr \<gamma>)"
+  apply (clarsimp simp: dist_real_def abs_real_def
+                  intro!: holder_onI[OF assms] exI[where x=1])
+  apply safe
      apply (smt (verit, best) powr_0_1_subadditive[OF assms])
     apply (meson assms greaterThanAtMost_iff powr_less_mono2)
    apply (metis assms greaterThanAtMost_iff linorder_not_less order_less_le powr_less_mono2)
